@@ -115,17 +115,68 @@ const Billing = () => {
   const [address, setAddress] = useState("");
   const [cart, setCart] = useState([]);
   const [subtotal, setSubtotal] = useState(0);
+  const [province, setProvince] = useState(""); // Tỉnh
+  const [district, setDistrict] = useState(""); // Huyện
+  const [ward, setWard] = useState(""); // Xã
+
+  const [provinces, setProvinces] = useState([]);
+  const [districts, setDistricts] = useState([]);
+  const [wards, setWards] = useState([]);
+  useEffect(() => {
+    fetchProvinces();
+  }, []);
+
+  useEffect(() => {
+    if (province) {
+      const selectedProvince = provinces.find(p => p.province_name === province);
+      if (selectedProvince) {
+        fetchDistricts(selectedProvince.province_id);
+      }
+    }
+  }, [province]);
+
+  useEffect(() => {
+    if (district) {
+      const selectedDistrict = districts.find(d => d.district_name === district);
+      if (selectedDistrict) {
+        fetchWards(selectedDistrict.district_id);
+      }
+    }
+  }, [district]);
+
+  const fetchProvinces = async () => {
+    const response = await fetch(`https://vapi.vnappmob.com/api/province/`);
+    const data = await response.json();
+    setProvinces(data.results);
+  };
+
+  const fetchDistricts = async (provinceId) => {
+    const response = await fetch(
+      `https://vapi.vnappmob.com/api/province/district/${provinceId}`
+    );
+    const data = await response.json();
+      setDistricts(data.results);
+  };
+
+  const fetchWards = async (districtId) => {
+    const response = await fetch(
+      `https://vapi.vnappmob.com/api/province/ward/${districtId}`
+    );
+    const data = await response.json();
+    setWards(data.results);
+  };
 
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
         const data = await getUserInfo(customer.id);
+  
         setName(data.data.full_name);
         setEmail(data.data.email);
         setPhoneNumber(data.data.phone_number);
-        setAddress(data.data.address);
+        setAddress(data.data.address); // Chỉ gán địa chỉ đã được xử lý
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     };
 
@@ -137,10 +188,12 @@ const Billing = () => {
         console.error("Error fetching shopping cart:", error);
       }
     };
-
+    fetchProvinces();
     fetchCart();
     fetchUserInfo();
   }, [customer.id]);
+
+  
 
   useEffect(() => {
     const fetchProductPrices = async () => {
@@ -167,10 +220,11 @@ const Billing = () => {
   const handleCheckout = async (e) => {
     e.preventDefault();
 
-    if (!name || !phoneNumber || !address) {
+    if (!name || !phoneNumber || !address || !province || !district || !ward) {
       toast.error("Vui lòng điền đầy đủ thông tin");
       return;
     }
+    const fullAddress = `${province}, ${district}, ${ward}, ${address}`;
 
     const items = cart?.map((item) => ({
       product_variant_id: item.product_variant_id,
@@ -181,7 +235,7 @@ const Billing = () => {
     dispatch(
       addOrder({
         items,
-        shipping_address: address,
+        shipping_address: fullAddress,
         total_amount: subtotal,
       })
     );
@@ -189,7 +243,10 @@ const Billing = () => {
     const data = await vnpayPayment(subtotal);
     window.location.href = data.data;
   };
+  
 
+ 
+  
   return (
     <BillingOrderWrapper className="billing-and-order grid items-start">
       <BillingDetailsWrapper>
@@ -197,103 +254,87 @@ const Billing = () => {
           Chi tiết thanh toán
         </h4>
         <form className="checkout-form">
-          <div className="input-elem-group elem-col-2">
-            <div className="input-elem">
-              <label
-                htmlFor=""
-                className="text-base text-outerspace font-semibold"
-              >
-                Họ và tên*
-              </label>
-              <Input
-                type="text"
-                placeholder="Họ và tên"
-                value={name}
-                onChange={(e) => {
-                  updateProfile({
-                    id: customer.id,
-                    field: "full_name",
-                    value: e.target.value,
-                  });
-
-                  setName(e.target.value);
-                }}
-              />
-            </div>
-            <div className="input-elem">
-              <label
-                htmlFor=""
-                className="text-base text-outerspace font-semibold"
-              >
-                Email
-              </label>
-              <Input
-                type="text"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => {
-                  updateProfile({
-                    id: customer.id,
-                    field: "email",
-                    value: e.target.value,
-                  });
-
-                  setEmail(e.target.value);
-                }}
-              />
-            </div>
+          <div className="input-elem">
+            <label>Họ và tên*</label>
+            <Input
+              type="text"
+              placeholder="Họ và tên"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
           </div>
-          <div className="input-elem-group elem-col-2">
-            <div className="input-elem">
-              <label
-                htmlFor=""
-                className="text-base text-outerspace font-semibold"
-              >
-                Số điện thoại*
-              </label>
-              <Input
-                type="text"
-                placeholder="Số điện thoại"
-                value={phoneNumber}
-                onChange={(e) => {
-                  updateProfile({
-                    id: customer.id,
-                    field: "phone_number",
-                    value: e.target.value,
-                  });
-
-                  setPhoneNumber(e.target.value);
-                }}
-              />
-            </div>
-            <div className="input-elem">
-              <label
-                htmlFor=""
-                className="text-base text-outerspace font-semibold"
-              >
-                Địa chỉ nhận hàng*
-              </label>
-              <Input
-                type="text"
-                placeholder="Địa chỉ nhận hàng"
-                value={address}
-                onChange={(e) => {
-                  updateProfile({
-                    id: customer.id,
-                    field: "address",
-                    value: e.target.value,
-                  });
-
-                  setAddress(e.target.value);
-                }}
-              />
-            </div>
+          <div className="input-elem">
+            <label>Email</label>
+            <Input
+              type="text"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </div>
-          <BaseButtonGreen
-            type="submit"
-            className="contd-delivery-btn"
-            onClick={handleCheckout}
-          >
+          <div className="input-elem">
+            <label>Số điện thoại*</label>
+            <Input
+              type="text"
+              placeholder="Số điện thoại"
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+            />
+          </div>
+          <div className="input-elem">
+            <label>Tỉnh*</label>
+            <select
+              value={province}
+              onChange={(e) => setProvince(e.target.value)}
+            >
+              <option value="">Chọn tỉnh</option>
+              {provinces.map((prov) => (
+                <option key={prov.province_id} value={prov.province_name}>
+                  {prov.province_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="input-elem">
+            <label>Huyện*</label>
+            <select
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+              disabled={!province}
+            >
+              <option value="">Chọn huyện</option>
+              {districts.map((dist) => (
+                <option key={dist.district_id} value={dist.district_name}>
+                  {dist.district_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="input-elem">
+            <label>Xã*</label>
+            <select
+              value={ward}
+              onChange={(e) => setWard(e.target.value)}
+              disabled={!district}
+            >
+              <option value="">Chọn xã</option>
+              {wards.map((w) => (
+                <option key={w.ward_id} value={w.ward_name}>
+                  {w.ward_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="input-elem">
+            <label>Địa chỉ chi tiết*</label>
+            <Input
+              type="text"
+              placeholder="Địa chỉ nhận hàng"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
+          </div>
+          <BaseButtonGreen type="submit" onClick={handleCheckout}>
             Thanh toán
           </BaseButtonGreen>
         </form>

@@ -102,8 +102,8 @@ const OrderSuccess = ({ orderData }) => {
     fetchProducts();
   }, [orderData]);
 
-  console.log("orderData", orderData);
-  console.log("products", products);
+  
+  
 
   return (
     <SuccessWrapper>
