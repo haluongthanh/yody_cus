@@ -128,7 +128,9 @@ const Billing = () => {
 
   useEffect(() => {
     if (province) {
-      const selectedProvince = provinces.find(p => p.province_name === province);
+      const selectedProvince = provinces.find(
+        (p) => p.province_name === province
+      );
       if (selectedProvince) {
         fetchDistricts(selectedProvince.province_id);
       }
@@ -137,7 +139,9 @@ const Billing = () => {
 
   useEffect(() => {
     if (district) {
-      const selectedDistrict = districts.find(d => d.district_name === district);
+      const selectedDistrict = districts.find(
+        (d) => d.district_name === district
+      );
       if (selectedDistrict) {
         fetchWards(selectedDistrict.district_id);
       }
@@ -155,7 +159,7 @@ const Billing = () => {
       `https://vapi.vnappmob.com/api/province/district/${provinceId}`
     );
     const data = await response.json();
-      setDistricts(data.results);
+    setDistricts(data.results);
   };
 
   const fetchWards = async (districtId) => {
@@ -165,21 +169,46 @@ const Billing = () => {
     const data = await response.json();
     setWards(data.results);
   };
-
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const data = await getUserInfo(customer.id);
-  
-        setName(data.data.full_name);
-        setEmail(data.data.email);
-        setPhoneNumber(data.data.phone_number);
-        setAddress(data.data.address); // Chỉ gán địa chỉ đã được xử lý
+        const savedShippingInfo = JSON.parse(
+          localStorage.getItem("shippingInfo")
+        );
+
+        if (savedShippingInfo) {
+          setName(savedShippingInfo.name || "");
+          setEmail(savedShippingInfo.email || "");
+          setPhoneNumber(savedShippingInfo.phoneNumber || "");
+          setAddress(savedShippingInfo.address || "");
+          setProvince(savedShippingInfo.province || "");
+          setDistrict(savedShippingInfo.district || "");
+          setWard(savedShippingInfo.ward || "");
+        } else {
+          const data = await getUserInfo(customer.id);
+          const { full_name, email, phone_number, address } = data.data;
+
+          const shippingInfo = {
+            name: full_name,
+            email,
+            phoneNumber: phone_number,
+            address,
+            province: "",
+            district: "",
+            ward: "",
+          };
+
+          setName(full_name);
+          setEmail(email);
+          setPhoneNumber(phone_number);
+          setAddress(address);
+
+          localStorage.setItem("shippingInfo", JSON.stringify(shippingInfo));
+        }
       } catch (error) {
-        console.error(error);
+        console.error("Error fetching user info:", error);
       }
     };
-
     const fetchCart = async () => {
       try {
         const data = await getShoppingCart();
@@ -188,12 +217,9 @@ const Billing = () => {
         console.error("Error fetching shopping cart:", error);
       }
     };
-    fetchProvinces();
     fetchCart();
     fetchUserInfo();
   }, [customer.id]);
-
-  
 
   useEffect(() => {
     const fetchProductPrices = async () => {
@@ -217,16 +243,61 @@ const Billing = () => {
     }
   }, [cart]);
 
+  const handleInputChange = (field, value) => {
+    const updatedShippingInfo = {
+      ...JSON.parse(localStorage.getItem("shippingInfo")),
+      [field]: value,
+    };
+
+    localStorage.setItem("shippingInfo", JSON.stringify(updatedShippingInfo));
+
+    switch (field) {
+      case "name":
+        setName(value);
+        break;
+      case "email":
+        setEmail(value);
+        break;
+      case "phoneNumber":
+        setPhoneNumber(value);
+        break;
+      case "address":
+        setAddress(value);
+        break;
+      case "province":
+        setProvince(value);
+        break;
+      case "district":
+        setDistrict(value);
+        break;
+      case "ward":
+        setWard(value);
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleCheckout = async (e) => {
     e.preventDefault();
 
-    if (!name || !phoneNumber || !address || !province || !district || !ward) {
+    const shippingInfo = JSON.parse(localStorage.getItem("shippingInfo"));
+
+    if (
+      !shippingInfo.name ||
+      !shippingInfo.phoneNumber ||
+      !shippingInfo.address ||
+      !shippingInfo.province ||
+      !shippingInfo.district ||
+      !shippingInfo.ward
+    ) {
       toast.error("Vui lòng điền đầy đủ thông tin");
       return;
     }
-    const fullAddress = `${province}, ${district}, ${ward}, ${address}`;
 
-    const items = cart?.map((item) => ({
+    const fullAddress = `${shippingInfo.province}, ${shippingInfo.district}, ${shippingInfo.ward}, ${shippingInfo.address}`;
+
+    const items = cart.map((item) => ({
       product_variant_id: item.product_variant_id,
       quantity: item.quantity,
       price: item.price,
@@ -243,10 +314,7 @@ const Billing = () => {
     const data = await vnpayPayment(subtotal);
     window.location.href = data.data;
   };
-  
 
- 
-  
   return (
     <BillingOrderWrapper className="billing-and-order grid items-start">
       <BillingDetailsWrapper>
@@ -260,7 +328,7 @@ const Billing = () => {
               type="text"
               placeholder="Họ và tên"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => handleInputChange("name", e.target.value)}
             />
           </div>
           <div className="input-elem">
@@ -269,7 +337,7 @@ const Billing = () => {
               type="text"
               placeholder="Email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => handleInputChange("email", e.target.value)}
             />
           </div>
           <div className="input-elem">
@@ -278,14 +346,14 @@ const Billing = () => {
               type="text"
               placeholder="Số điện thoại"
               value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
+              onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
             />
           </div>
           <div className="input-elem">
             <label>Tỉnh*</label>
             <select
               value={province}
-              onChange={(e) => setProvince(e.target.value)}
+              onChange={(e) => handleInputChange("province", e.target.value)}
             >
               <option value="">Chọn tỉnh</option>
               {provinces.map((prov) => (
@@ -299,7 +367,7 @@ const Billing = () => {
             <label>Huyện*</label>
             <select
               value={district}
-              onChange={(e) => setDistrict(e.target.value)}
+              onChange={(e) => handleInputChange("district", e.target.value)}
               disabled={!province}
             >
               <option value="">Chọn huyện</option>
@@ -314,7 +382,7 @@ const Billing = () => {
             <label>Xã*</label>
             <select
               value={ward}
-              onChange={(e) => setWard(e.target.value)}
+              onChange={(e) => handleInputChange("ward", e.target.value)}
               disabled={!district}
             >
               <option value="">Chọn xã</option>
@@ -326,16 +394,16 @@ const Billing = () => {
             </select>
           </div>
           <div className="input-elem">
-            <label>Địa chỉ chi tiết*</label>
+            <label>Địa chỉ*</label>
             <Input
               type="text"
-              placeholder="Địa chỉ nhận hàng"
+              placeholder="Địa chỉ chi tiết"
               value={address}
-              onChange={(e) => setAddress(e.target.value)}
+              onChange={(e) => handleInputChange("address", e.target.value)}
             />
           </div>
-          <BaseButtonGreen type="submit" onClick={handleCheckout}>
-            Thanh toán
+          <BaseButtonGreen onClick={handleCheckout}>
+            Đặt hàng
           </BaseButtonGreen>
         </form>
       </BillingDetailsWrapper>
@@ -343,5 +411,4 @@ const Billing = () => {
     </BillingOrderWrapper>
   );
 };
-
 export default Billing;
