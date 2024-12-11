@@ -83,6 +83,7 @@ const CheckoutSummaryWrapper = styled.div`
 const CheckoutSummary = ({ cartItems, subtotal }) => {
   const grandTotal = subtotal;
   const shippingCost = 0;
+  const count = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   const [orderDetails, setOrderDetails] = useState([]);
 
@@ -166,7 +167,7 @@ const CheckoutSummary = ({ cartItems, subtotal }) => {
         <li className="flex items-center justify-between">
           <span className="text-outerspace font-bold text-lg">
             Tạm tính{" "}
-            <span className="text-gray font-semibold">(3 sản phẩm)</span>
+            <span className="text-gray font-semibold"></span>
           </span>
           <span className="text-outerspace font-bold text-lg">
             {subtotal.toLocaleString("vi-VN", {

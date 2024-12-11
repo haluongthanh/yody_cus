@@ -44,6 +44,9 @@ const HeroSliderItemWrapper = styled.div`
 
   img {
     display: block;
+    width: 100%; /* Ensure the image takes up the full width */
+    height: 100%; /* Make the image cover the full height of the wrapper */
+    object-fit: cover; /* Ensures the image maintains its aspect ratio while covering the area */
   }
 `;
 
@@ -80,7 +83,7 @@ const Hero = () => {
           {bannerData?.map((banner) => {
             return (
               <HeroSliderItemWrapper key={banner.id}>
-                <img src={banner.imgSource} style={{ objectFit: "contain" }} />
+                <img src={banner.imgSource} alt={banner.altText} />
               </HeroSliderItemWrapper>
             );
           })}

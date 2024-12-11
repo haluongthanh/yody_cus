@@ -31,6 +31,7 @@ const BillingDetailsWrapper = styled.div`
   @media (max-width: ${breakpoints.lg}) {
     order: 2;
   }
+    
 
   .checkout-form {
     margin-top: 24px;
@@ -64,7 +65,7 @@ const BillingDetailsWrapper = styled.div`
       }
     }
 
-    .elem-col-2 {
+    .input-row {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       column-gap: 24px;
@@ -72,33 +73,9 @@ const BillingDetailsWrapper = styled.div`
       @media (max-width: ${breakpoints.lg}) {
         column-gap: 12px;
       }
-      @media (max-width: ${breakpoints.sm}) {
-        grid-template-columns: 100%;
-      }
-    }
-
-    .elem-col-3 {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      column-gap: 24px;
-
-      @media (max-width: ${breakpoints.lg}) {
+        @media (max-width: ${breakpoints.sm}) {
         column-gap: 12px;
-      }
-      @media (max-width: ${breakpoints.sm}) {
         grid-template-columns: 100%;
-      }
-    }
-
-    .input-check-group {
-      column-gap: 10px;
-      margin-top: 16px;
-    }
-    .contd-delivery-btn {
-      margin-top: 20px;
-
-      @media (max-width: ${breakpoints.sm}) {
-        width: 100%;
       }
     }
   }
@@ -122,6 +99,7 @@ const Billing = () => {
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [wards, setWards] = useState([]);
+
   useEffect(() => {
     fetchProvinces();
   }, []);
@@ -135,7 +113,7 @@ const Billing = () => {
         fetchDistricts(selectedProvince.province_id);
       }
     }
-  }, [province]);
+  }, [province,provinces]);
 
   useEffect(() => {
     if (district) {
@@ -146,7 +124,7 @@ const Billing = () => {
         fetchWards(selectedDistrict.district_id);
       }
     }
-  }, [district]);
+  }, [district,districts]);
 
   const fetchProvinces = async () => {
     const response = await fetch(`https://vapi.vnappmob.com/api/province/`);
@@ -169,6 +147,7 @@ const Billing = () => {
     const data = await response.json();
     setWards(data.results);
   };
+
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
@@ -242,6 +221,11 @@ const Billing = () => {
       fetchProductPrices(); // Chỉ gọi hàm nếu cart không rỗng
     }
   }, [cart]);
+  const isValidPhoneNumber = (phone) => {
+    const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/; // Định dạng số ĐT Việt Nam
+    return phoneRegex.test(phone);
+  };
+  
 
   const handleInputChange = (field, value) => {
     const updatedShippingInfo = {
@@ -294,6 +278,10 @@ const Billing = () => {
       toast.error("Vui lòng điền đầy đủ thông tin");
       return;
     }
+    if (!isValidPhoneNumber(shippingInfo.phoneNumber)) {
+      toast.error("Số điện thoại không hợp lệ");
+      return;
+    }
 
     const fullAddress = `${shippingInfo.province}, ${shippingInfo.district}, ${shippingInfo.ward}, ${shippingInfo.address}`;
 
@@ -314,7 +302,6 @@ const Billing = () => {
     const data = await vnpayPayment(subtotal);
     window.location.href = data.data;
   };
-
   return (
     <BillingOrderWrapper className="billing-and-order grid items-start">
       <BillingDetailsWrapper>
@@ -322,89 +309,89 @@ const Billing = () => {
           Chi tiết thanh toán
         </h4>
         <form className="checkout-form">
-          <div className="input-elem">
-            <label>Họ và tên*</label>
-            <Input
-              type="text"
-              placeholder="Họ và tên"
-              value={name}
-              onChange={(e) => handleInputChange("name", e.target.value)}
-            />
+          <div className="input-row elem-col-2">
+            <div className="input-elem">
+              <label>Họ và tên*</label>
+              <Input
+                type="text"
+                placeholder="Họ và tên"
+                value={name}
+                onChange={(e) => handleInputChange("name", e.target.value)}
+              />
+            </div>
+            <div className="input-elem elem-col-2">
+              <label>Số điện thoại*</label>
+              <Input
+                type="text"
+                placeholder="Số điện thoại"
+                value={phoneNumber}
+                onChange={(e) =>
+                  handleInputChange("phoneNumber", e.target.value)
+                }
+              />
+            </div>
           </div>
-          <div className="input-elem">
-            <label>Email</label>
-            <Input
-              type="text"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => handleInputChange("email", e.target.value)}
-            />
+
+          <div className="input-row elem-col-2">
+            <div className="input-elem">
+              <label>Tỉnh*</label>
+              <select
+                value={province}
+                onChange={(e) => handleInputChange("province", e.target.value)}
+              >
+                <option value="">Chọn </option>
+                {provinces.map((prov) => (
+                  <option key={prov.province_id} value={prov.province_name}>
+                    {prov.province_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="input-elem elem-col-2">
+              <label>Huyện*</label>
+              <select
+                value={district}
+                onChange={(e) => handleInputChange("district", e.target.value)}
+                disabled={!province}
+              >
+                <option value="">Chọn huyện</option>
+                {districts.map((dist) => (
+                  <option key={dist.district_id} value={dist.district_name}>
+                    {dist.district_name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div className="input-elem">
-            <label>Số điện thoại*</label>
-            <Input
-              type="text"
-              placeholder="Số điện thoại"
-              value={phoneNumber}
-              onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
-            />
+
+          <div className="input-row elem-col-2">
+            <div className="input-elem">
+              <label>Xã*</label>
+              <select
+                value={ward}
+                onChange={(e) => handleInputChange("ward", e.target.value)}
+                disabled={!district}
+              >
+                <option value="">Chọn xã</option>
+                {wards.map((w) => (
+                  <option key={w.ward_id} value={w.ward_name}>
+                    {w.ward_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="input-elem elem-col-2">
+              <label>Địa chỉ*</label>
+              <Input
+                type="text"
+                placeholder="Địa chỉ chi tiết"
+                value={address}
+                onChange={(e) => handleInputChange("address", e.target.value)}
+              />
+            </div>
           </div>
-          <div className="input-elem">
-            <label>Tỉnh*</label>
-            <select
-              value={province}
-              onChange={(e) => handleInputChange("province", e.target.value)}
-            >
-              <option value="">Chọn tỉnh</option>
-              {provinces.map((prov) => (
-                <option key={prov.province_id} value={prov.province_name}>
-                  {prov.province_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="input-elem">
-            <label>Huyện*</label>
-            <select
-              value={district}
-              onChange={(e) => handleInputChange("district", e.target.value)}
-              disabled={!province}
-            >
-              <option value="">Chọn huyện</option>
-              {districts.map((dist) => (
-                <option key={dist.district_id} value={dist.district_name}>
-                  {dist.district_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="input-elem">
-            <label>Xã*</label>
-            <select
-              value={ward}
-              onChange={(e) => handleInputChange("ward", e.target.value)}
-              disabled={!district}
-            >
-              <option value="">Chọn xã</option>
-              {wards.map((w) => (
-                <option key={w.ward_id} value={w.ward_name}>
-                  {w.ward_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="input-elem">
-            <label>Địa chỉ*</label>
-            <Input
-              type="text"
-              placeholder="Địa chỉ chi tiết"
-              value={address}
-              onChange={(e) => handleInputChange("address", e.target.value)}
-            />
-          </div>
-          <BaseButtonGreen onClick={handleCheckout}>
-            Đặt hàng
-          </BaseButtonGreen>
+
+          <BaseButtonGreen onClick={handleCheckout}>Đặt hàng</BaseButtonGreen>
         </form>
       </BillingDetailsWrapper>
       <CheckoutSummary cartItems={cart} subtotal={subtotal} />
