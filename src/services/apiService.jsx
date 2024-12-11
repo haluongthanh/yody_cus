@@ -6,6 +6,9 @@ export const postLogin = async (username, password) => {
     password,
   });
 };
+export const forgotPassword=async(email)=>{
+  return axios.get(`/api/auth/forgot-password?email=${email}`)
+}
 
 export const postRegister = async ({ email, fullName, password }) => {
   return axios.post("api/auth/register", {
